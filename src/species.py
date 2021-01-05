@@ -1,14 +1,15 @@
 from brain import Brain
-from typing import List
 import random
 
 class Species:
     def __init__(self, base: Brain):
-        self.champion: Brain = base.clone()
+        self.BrainClass = type(base)
+
+        self.champion: Brain = self.BrainClass.clone(base)
         self.fitness = self.champion.fitness
         self.avgAdjustedFitness = 0
         
-        self.population: List[Brain] = [base]
+        self.population = [base]
 
         self.staleness = 0
 
@@ -33,7 +34,7 @@ class Species:
         self.population.sort(key=lambda b: b.fitness, reverse=True)
 
         if self.population[0].fitness > self.fitness:
-            self.champion = self.population[0].clone()
+            self.champion = self.BrainClass.clone(self.population[0])
             self.fitness = self.champion.fitness
             self.staleness = 0
         else:
@@ -42,6 +43,7 @@ class Species:
     def selectBrain(self):
         """
         Randomly selects a brain from this species w.r.t. its fitness.
+
         call .sort() before!
         """
         fitnessSum = 0
@@ -53,10 +55,13 @@ class Species:
             runningSum += b.fitness
             if r < runningSum: 
                 return b
+        print(f"ERROR IN THE BRAIN SELECTION PROCESS: fitnessSum: {fitnessSum}, r: {r}, runningSum: {runningSum}")
+        print(self)
 
     def updateAvgAdjustedFitness(self):
         """
         Updates this species average fitness
+
         make sure that this generation's fitness has been computed before!
         """
 
@@ -70,6 +75,7 @@ class Species:
     def cull(self, cullRate=0.5):
         """
         Removes worst performing brains form population
+
         call .sort() before!
         """
         # don't cull if it leaves less than 2 brains
@@ -83,7 +89,7 @@ class Species:
         """
         Generates a mutated clone child from this species
         """
-        child = self.selectBrain().clone()
+        child = self.BrainClass.clone(self.selectBrain())
         child.mutate()
         return child
 
@@ -94,5 +100,7 @@ class Species:
         """
         parent1 = self.selectBrain()
         parent2 = species.selectBrain()
-        
-        return parent1.crossover(parent2) if parent1.fitness > parent2.fitness else parent2.crossover(parent1)
+        if parent1.fitness > parent2.fitness:
+            return self.BrainClass.crossover(parent1, parent2)
+        else: 
+            return self.BrainClass.crossover(parent2, parent1)

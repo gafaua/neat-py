@@ -1,28 +1,30 @@
-from brain import Brain
 from species import Species
 from settings import GenomeSettings, PopulationSettings
 from innovationManager import InnovationManager
-from typing import List
 import random
 
-class Population:
-    def __init__(self, settings: PopulationSettings):
-        self.settings = settings
+# TODO Deal with staleness problem
+# TODO Test with real optimization problem
 
-        self.species: List[Species] = []
-        self.brains: List[Brain] = []
-        self.championHistory: List[Brain] = []
+class Population:
+    def __init__(self, settings: PopulationSettings, BrainClass: type):
+        self.settings = settings
+        self.BrainClass = BrainClass
+
+        self.species = []
+        self.brains = []
+        self.championHistory = []
 
         self.generation = 0
 
         self.innovationManager = InnovationManager(self.settings.genome)
 
         for _ in range(self.settings.size):
-            b = Brain.create(self.innovationManager, self.settings.genome)
+            b = self.BrainClass.create(self.innovationManager, self.settings.genome)
             b.mutate()
             self.brains.append(b)
 
-        self.globalChampion: Brain = self.brains[0]
+        self.globalChampion: B = self.brains[0]
 
 
     def __str__(self):
@@ -35,6 +37,9 @@ class Population:
 
     def evolve(self):
         print(f"Generation: {self.generation}")
+
+        newChampion = False
+
         self.speciate()
 
         # evaluate the fitness of every brain of this population
@@ -52,8 +57,9 @@ class Population:
         
         # update best player if needed
         if self.globalChampion.fitness < self.species[0].population[0].fitness:
+            newChampion = True
             self.globalChampion = self.species[0].population[0]
-            self.championHistory.append(self.globalChampion.clone())
+            self.championHistory.append(self.BrainClass.clone(self.globalChampion))
             print(f"New champion brain - Generation {self.generation} - Fitness {self.globalChampion.fitness}")
         
         avgAdjustedFitnessSum = self.getAvgAdjustedFitnessSum()
@@ -73,7 +79,7 @@ class Population:
         avgAdjustedFitnessSum = self.getAvgAdjustedFitnessSum()
 
         for s in self.species:
-            best = s.champion.clone()
+            best = self.BrainClass.clone(s.champion)
             best.generation = self.generation
             nextGeneration.append(best)
 
@@ -86,6 +92,8 @@ class Population:
 
         self.brains = nextGeneration
 
+        return newChampion
+
     def generateOffspring(self, s: Species):
         offspring = None
         if random.random() < self.settings.crossoverRate:
@@ -96,7 +104,6 @@ class Population:
         else:
             offspring = s.generateChild()
         return offspring
-
 
     def speciate(self):
         # assign a species to every brain 

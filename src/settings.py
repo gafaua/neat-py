@@ -36,7 +36,7 @@ class PopulationSettings:
                  genomeSettings: GenomeSettings,
                  speciesDistanceThreshold: float = 3,
                  cullRate: float = 0.5,
-                 maxStaleness: int = 15,
+                 maxStaleness: int = 100,
                  crossoverRate: float = 0.75,
                  interSpeciesCrossoverRate: float = 0.001):
         self.size = size

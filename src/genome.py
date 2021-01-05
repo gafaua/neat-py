@@ -2,6 +2,7 @@ from node import Node
 from connection import Connection
 from innovationManager import InnovationManager
 from settings import GenomeSettings
+from errors import InvalidTopologyError
 import matplotlib.pyplot as plt
 import networkx as nx
 import random
@@ -60,8 +61,7 @@ class Genome:
         return [self.nodes[i + self.settings.inputs + self.settings.bias] for i in range(self.settings.outputs)]
 
     def plot(self, block=False, pauseTime=1.0, fname=None):
-        # TODO differenciate inputs/bias/outputs
-        #      add title
+        # TODO add title
         G = nx.DiGraph()
 
         nodeColors = []
@@ -86,7 +86,6 @@ class Genome:
         for u,v,data in G.edges(data=True):
             colors.append('blue' if data['weight'] > 0 else 'red')
             widths.append(abs(data['weight']))
-        
 
         options = {
             'node_color': nodeColors,
@@ -102,7 +101,6 @@ class Genome:
             'linewidths': 2.0,
             'with_labels': True
         }
-        plt.clf()
         nx.draw_networkx(G, arrows=True, **options)
 
         if fname is not None:
@@ -236,42 +234,47 @@ class Genome:
         outputs = list(map(lambda n: n.value, self.network[-self.settings.outputs:]))
         return outputs
 
-    def crossover(self, genome, sameFitness=False):
+    @classmethod
+    def crossover(cls, first, second, sameFitness=False):
         """
-        Generates the crossover child between self and param genome
-        This method assumes that self has a better fitness score than genome
+        Generates the crossover child between param first and param second
+        
+        This method assumes that first has a better fitness score than second
+
+        first: Genome
+
+        second: Genome
         """
 
-        child = Genome(self.innovationManager)
+        child = cls(first.innovationManager)
 
-        child.settings = self.settings
+        child.settings = first.settings
 
         connections = []
         if sameFitness:
             # add all disjoint and excess connection genes and randomly select common ones
-            common = set(self.connections).intersection(set(genome.connections))
-            connections = [self.connections[c] for c in self.connections if c not in common] + \
-                          [genome.connections[c] for c in genome.connections if c not in common] + \
-                          [self.connections[c] if random.random() < 0.5 else genome.connections[c] for c in common]
+            common = set(first.connections).intersection(set(second.connections))
+            connections = [first.connections[c] for c in first.connections if c not in common] + \
+                          [second.connections[c] for c in second.connections if c not in common] + \
+                          [first.connections[c] if random.random() < 0.5 else second.connections[c] for c in common]
         else:
-            connections = [c for c in self.connections.values()] + \
-                          [genome.connections[c] for c in genome.connections if c not in self.connections]
+            connections = [c for c in first.connections.values()] + \
+                          [second.connections[c] for c in second.connections if c not in first.connections]
 
-        connections.sort(key=lambda c: c.inNode.layer)
+        connections.sort(key=lambda c: (c.inNode.layer, c.inNode.id))
         #add input & bias & output nodes
-        for n in self.inputNodes(): child.nodes[n.id] = n.clone()
-        for n in self.outputNodes(): child.nodes[n.id] = n.clone()
-        pr = False
+        for n in first.inputNodes(): child.nodes[n.id] = n.clone()
+        for n in first.outputNodes(): child.nodes[n.id] = n.clone()
 
+        check = False
         # add connections
         for c in connections:
             inNode = child.nodes.get(c.inNode.id)
             outNode = child.nodes.get(c.outNode.id)
             if inNode is None:
-                print(c)
+                check = True
                 inNode = c.inNode.clone()
                 child.nodes[inNode.id] = inNode
-                pr = True
             if outNode is None:
                 outNode = c.outNode.clone()
                 child.nodes[outNode.id] = outNode
@@ -302,10 +305,8 @@ class Genome:
 
         child.computeMaxConnections()
 
-        if pr:
-            print(child)
-            child.plot(block=True)
-            
+        if check and not child.isTopologyValid():
+            raise InvalidTopologyError("There was a problem during the crossover process")
 
         return child
 

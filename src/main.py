@@ -5,6 +5,7 @@ from settings import GenomeSettings, PopulationSettings
 from timer import Timer
 from matplotlib import pyplot as plt
 from population import Population
+from brain import Brain
 
 def testTopologies(n, settings):
     random.seed(10)
@@ -63,15 +64,31 @@ def testTopologies(n, settings):
     plt.legend()
     plt.show()
 
+class Player(Brain):
+    def setInputValues(self):
+        self.inputValues = []
+    
+    def fitnessEvaluationMethod(self):
+        return len(self.genome.connections)
 # seed: 0
 # i: 2
 # o: 1
 # range (50)
 if __name__ == "__main__":
     random.seed(1)
-    genomeSettings = GenomeSettings(inputs=4, outputs=3, bias=1)
+
+    genomeSettings = GenomeSettings(inputs=4, outputs=3, bias=0)
+    # im = InnovationManager(genomeSettings)
+    # pl = Player.create(im, genomeSettings)
+
+    # print(type(pl).create(im, genomeSettings).fitnessEvaluationMethod())
+
+
     populationSettings = PopulationSettings(size=100, genomeSettings=genomeSettings)
-    p = Population(populationSettings)
-    for i in range(100):
-        p.evolve()
+    p = Population(populationSettings, Player)
+    for i in range(200):
+        if p.evolve():
+            p.globalChampion.plot(pauseTime=0.0001)
     print(p)
+
+    p.globalChampion.plot(block=True)
