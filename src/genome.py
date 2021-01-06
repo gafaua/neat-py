@@ -33,7 +33,7 @@ class Genome:
                 self.createConnection(n1, n2)
 
         # genome is fully connected on creation
-        self.maxConnections = len(self.connections)
+        self.availableNodes = []
 
     def __str__(self):
         value = "Genome\n\n"
@@ -111,21 +111,27 @@ class Genome:
         else:
             plt.pause(pauseTime)
 
-    def computeMaxConnections(self):
-        maxConnections = 0
-        layerNodes = [0] * self.layers
+    def updateAvailableNodes(self):
+        layerNodes = [set() for _ in range(self.layers)]
         nodes = self.nodes.values()
 
-        for layer in range(self.layers):
-            for node in nodes:
-                if node.layer == layer:
-                    layerNodes[layer] += 1
+        for node in nodes:
+            layerNodes[node.layer].add(node)
 
-        for i in range(self.layers):
-            for j in range(i + 1, self.layers):
-                maxConnections += layerNodes[i] * layerNodes[j]
-
-        self.maxConnections = maxConnections
+        maxConnectionsPerLayer = [set() for _ in range(self.layers)]
+        possibleConnections = set()
+        for i in reversed(range(self.layers)):
+            maxConnectionsPerLayer[i].update(possibleConnections)
+            possibleConnections.update(layerNodes[i])
+        
+        self.availableNodes = set()
+        
+        for node in nodes:
+            connectedTo = set(map(lambda c: c.outNode, node.outputs))
+            availableToConnect = maxConnectionsPerLayer[node.layer].difference(connectedTo)
+            if len(availableToConnect) > 0:
+                self.availableNodes.update(availableToConnect)
+                self.availableNodes.add(node)
 
     def generateNetwork(self):
         if len(self.network) == len(self.nodes):
@@ -133,16 +139,12 @@ class Genome:
         # first sort key is layer, second is id to make sure inputs and outputs are ordered
         self.network = sorted(self.nodes.values(), key=lambda n: (n.layer, n.id))
 
-    def isFullyConnected(self):
-        return len(self.connections) == self.maxConnections
-
     def addConnection(self):
-        if self.isFullyConnected():
+        if len(self.availableNodes) < 2:
             return
 
-        # TODO remove first fully connected nodes
         def getTwoRandomNodes():
-            n1, n2 = random.sample(list(self.nodes.values()), 2)
+            n1, n2 = random.sample(self.availableNodes, 2)
             if n1.layer > n2.layer:
                 nTemp = n1
                 n1 = n2
@@ -179,11 +181,11 @@ class Genome:
         self.nodes[newId] = newNode
 
         # add connection n1 --1.0--> newNode
-        self.createConnection(n1, newNode)
+        self.createConnection(n1, newNode, 1.0)
         # add connection newNode --weight--> n2
         self.createConnection(newNode, n2, oldConnection.weight)
 
-        self.computeMaxConnections()
+        self.updateAvailableNodes()
 
     def mutate(self):
         if len(self.connections) == 0:
@@ -210,18 +212,15 @@ class Genome:
         n1.addConnection(newConnection)
         self.connections[innovationNumber] = newConnection
 
-    def generateOutputs(self, inputValues):
+    def generateOutputValues(self, inputValues):
         # ordering nodes according to their respective layer and id
         self.generateNetwork()
-        print("Network:")
-        for node in self.network:
-            print(node)
 
         inputs = inputValues + [1]*self.settings.bias
 
         # setting input values to the input nodes
         for i in range(self.settings.inputs + self.settings.bias):
-            self.network[i] = inputs[i]
+            self.network[i].value = inputs[i]
 
         # resetting to 0 the values of every other nodes
         for i in range(self.settings.inputs + self.settings.bias, len(self.nodes)):
@@ -247,21 +246,18 @@ class Genome:
         """
 
         child = cls(first.innovationManager)
-
         child.settings = first.settings
 
-        connections = []
-        if sameFitness:
-            # add all disjoint and excess connection genes and randomly select common ones
-            common = set(first.connections).intersection(set(second.connections))
-            connections = [first.connections[c] for c in first.connections if c not in common] + \
-                          [second.connections[c] for c in second.connections if c not in common] + \
-                          [first.connections[c] if random.random() < 0.5 else second.connections[c] for c in common]
-        else:
-            connections = [c for c in first.connections.values()] + \
-                          [second.connections[c] for c in second.connections if c not in first.connections]
+        # randomly add common connections (matching genes)
+        common = set(first.connections).intersection(set(second.connections))
+        connections = [first.connections[c] if random.random() < 0.5 else second.connections[c] for c in common]
+
+        # add excess and disjoint genes from the most fit parent or from the smallest parent if both have the same fitness
+        disjointSrc = second if sameFitness and len(first.connections) > len(second.connections) else first
+        connections += [disjointSrc.connections[c] for c in disjointSrc.connections if c not in common] 
 
         connections.sort(key=lambda c: (c.inNode.layer, c.inNode.id))
+
         #add input & bias & output nodes
         for n in first.inputNodes(): child.nodes[n.id] = n.clone()
         for n in first.outputNodes(): child.nodes[n.id] = n.clone()
@@ -272,13 +268,18 @@ class Genome:
             inNode = child.nodes.get(c.inNode.id)
             outNode = child.nodes.get(c.outNode.id)
             if inNode is None:
-                inNodeNotFound = True
                 inNode = c.inNode.clone()
                 child.nodes[inNode.id] = inNode
             if outNode is None:
                 outNode = c.outNode.clone()
                 child.nodes[outNode.id] = outNode
-            connection = Connection(inNode, outNode, c.innovationNumber, c.weight, c.enabled)
+
+            enabled = c.enabled
+            i = c.innovationNumber
+            if i in common and not (first.connections[i].enabled and second.connections[i].enabled):
+                enabled = random.random() < 0.25
+
+            connection = Connection(inNode, outNode, c.innovationNumber, c.weight, enabled)
             inNode.addConnection(connection)
             child.connections[connection.innovationNumber] = connection
 
@@ -303,19 +304,17 @@ class Genome:
         for n in child.outputNodes():
             n.layer = maxLayer
 
-        child.computeMaxConnections()
+        child.updateAvailableNodes()
 
-        if inNodeNotFound and not child.isTopologyValid():
-            # inNodeNotFound should almost always be false, when true,
-            # make sure that the crossover worked correctly
-            raise InvalidTopologyError("There was a problem during the crossover process")
+        # if False and not child.isTopologyValid():
+        #     # make sure that the crossover worked correctly
+        #     raise InvalidTopologyError("There was a problem during the crossover process")
 
         return child
 
     def clone(self):
         copy = Genome(self.innovationManager)
         copy.settings = self.settings
-        copy.maxConnections = self.maxConnections
         copy.layers = self.layers
 
         for n in self.nodes.values():
@@ -331,6 +330,7 @@ class Genome:
             inNode.addConnection(connection)
             copy.connections[connection.innovationNumber] = connection
 
+        copy.updateAvailableNodes()
         return copy
 
     def isTopologyValid(self):
@@ -349,7 +349,7 @@ class Genome:
 
         return True
 
-    def distance(self, genome, coeffDisjoint=1.0, coeffWeights=1.0):
+    def distance(self, genome):
         """
         Compute the distance between self and param genome
         """
@@ -365,4 +365,5 @@ class Genome:
         for c in common:
             weightDistanceAvg += abs(self.connections[c].weight - genome.connections[c].weight)
 
-        return coeffDisjoint * (n1 + n2 - 2*len(common)) / N + coeffWeights * weightDistanceAvg / len(common)
+        return self.settings.distance.coeffDisjoint * (n1 + n2 - 2*len(common)) / N + \
+               self.settings.distance.coeffWeights * weightDistanceAvg / len(common)

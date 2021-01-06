@@ -65,11 +65,24 @@ def testTopologies(n, settings):
     plt.show()
 
 class Player(Brain):
-    def setInputValues(self):
-        self.inputValues = []
+    def setInputValues(self, i):
+        self.inputValues = [i[0], i[1]]
     
-    def fitnessEvaluationMethod(self):
-        return self.genome.layers
+    def fitnessEvaluationMethod(self, show=False):
+        tests = [(0,0,0),(0,1,1),(1,0,1),(1,1,0)]
+
+        dist = 0
+
+        for i in tests:
+            self.setInputValues(i)
+            self.generateOutputValues()
+            oo = 0.0 if self.outputValues[0] < 0.5 else 1.0
+
+            dist += abs(i[2] - self.outputValues[0])
+            if show:
+                print(f"i0: {i[0]}, i1: {i[1]}, expected: {i[2]}, result: {oo}")
+
+        return (4 - dist)**2
 # seed: 0
 # i: 2
 # o: 1
@@ -77,18 +90,26 @@ class Player(Brain):
 if __name__ == "__main__":
     random.seed(1)
 
-    genomeSettings = GenomeSettings(inputs=4, outputs=3, bias=0)
+    genomeSettings = GenomeSettings(inputs=2, outputs=1, bias=0)
     # im = InnovationManager(genomeSettings)
     # pl = Player.create(im, genomeSettings)
 
     # print(type(pl).create(im, genomeSettings).fitnessEvaluationMethod())
 
 
-    populationSettings = PopulationSettings(size=100, genomeSettings=genomeSettings)
+    populationSettings = PopulationSettings(size=150, genomeSettings=genomeSettings)
     p = Population(populationSettings, Player)
-    for i in range(200):
+    cnt = 0
+    max_ = 1000
+    while p.globalChampion.fitness < 13:
+        cnt += 1
         if p.evolve():
             p.globalChampion.plot(pauseTime=0.0001)
-    print(p)
+        if cnt == max_:
+            break
 
+    print(p.globalChampion)
+    print(p.globalChampion.genome)
+
+    p.globalChampion.fitnessEvaluationMethod(show=True)
     p.globalChampion.plot(block=True)

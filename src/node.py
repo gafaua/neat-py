@@ -32,8 +32,7 @@ class Node:
         return node.id in map(lambda x: x.outNode.id, self.outputs)
     
     def forward(self):
-        if self.layer > 0:
-            self.value = sigmoid(self.value)
+        self.value = sigmoid(self.value)
         
         for c in self.outputs:
             if c.enabled:

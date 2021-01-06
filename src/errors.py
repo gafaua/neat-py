@@ -1,1 +1,2 @@
-class InvalidTopologyError(Exception): pass
+class InvalidTopologyError(Exception):
+    pass

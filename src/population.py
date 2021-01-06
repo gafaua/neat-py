@@ -77,7 +77,6 @@ class Population:
 
         nextGeneration = []
         avgAdjustedFitnessSum = self.getAvgAdjustedFitnessSum()
-
         for s in self.species:
             best = self.BrainClass.clone(s.champion)
             best.generation = self.generation
