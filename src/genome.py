@@ -266,13 +266,13 @@ class Genome:
         for n in first.inputNodes(): child.nodes[n.id] = n.clone()
         for n in first.outputNodes(): child.nodes[n.id] = n.clone()
 
-        check = False
+        inNodeNotFound = False
         # add connections
         for c in connections:
             inNode = child.nodes.get(c.inNode.id)
             outNode = child.nodes.get(c.outNode.id)
             if inNode is None:
-                check = True
+                inNodeNotFound = True
                 inNode = c.inNode.clone()
                 child.nodes[inNode.id] = inNode
             if outNode is None:
@@ -305,7 +305,9 @@ class Genome:
 
         child.computeMaxConnections()
 
-        if check and not child.isTopologyValid():
+        if inNodeNotFound and not child.isTopologyValid():
+            # inNodeNotFound should almost always be false, when true,
+            # make sure that the crossover worked correctly
             raise InvalidTopologyError("There was a problem during the crossover process")
 
         return child

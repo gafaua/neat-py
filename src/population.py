@@ -24,7 +24,7 @@ class Population:
             b.mutate()
             self.brains.append(b)
 
-        self.globalChampion: B = self.brains[0]
+        self.globalChampion = self.brains[0]
 
 
     def __str__(self):

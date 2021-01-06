@@ -69,7 +69,7 @@ class Player(Brain):
         self.inputValues = []
     
     def fitnessEvaluationMethod(self):
-        return len(self.genome.connections)
+        return self.genome.layers
 # seed: 0
 # i: 2
 # o: 1
