@@ -64,15 +64,7 @@ class Population:
         
         # avgAdjustedFitnessSum = self.getAvgAdjustedFitnessSum()
 
-        # i = 0
-        # while i < len(self.species):
-        #     nOffspring = self.settings.size * (self.species[i].avgAdjustedFitness / avgAdjustedFitnessSum)
-        #     if self.species[i].staleness >= self.settings.maxStaleness or \
-        #        nOffspring < 1:
-        #         del self.species[i]
-        #         i -= 1
-        #     i += 1
-
+        # TODO remove bad species and species which have been stale for too long
         for s in self.species:
             if s.staleness >= self.settings.maxStaleness:
                 s.avgAdjustedFitness *= 0.1

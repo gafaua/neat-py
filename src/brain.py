@@ -43,7 +43,6 @@ class Brain:
         copy.fitness = brain.fitness
         return copy
 
-
     def setInputValues(self):
         """
         Method to overload to get inputs to feed to the neural network
@@ -51,7 +50,7 @@ class Brain:
         """
         raise NotImplementedError
 
-    def fitnessEvaluationMethod(self):
+    def fitnessEvaluation(self):
         """
         Method to overload to establish an evaluation method
         This method returns a float fitness value
@@ -76,7 +75,7 @@ class Brain:
         self.outputValues = self.genome.generateOutputValues(self.inputValues)
 
     def evaluateFitness(self):
-        self.fitness = self.fitnessEvaluationMethod()
+        self.fitness = self.fitnessEvaluation()
 
     def mutate(self):
         self.genome.mutate()

@@ -1,11 +1,9 @@
+
 import random
+from timer import Timer
 from innovationManager import InnovationManager
 from genome import Genome
-from settings import GenomeSettings, PopulationSettings
-from timer import Timer
 from matplotlib import pyplot as plt
-from population import Population
-from brain import Brain
 
 def testTopologies(n, settings):
     random.seed(10)
@@ -63,47 +61,3 @@ def testTopologies(n, settings):
     plt.scatter(x,c, label="Crossover time")
     plt.legend()
     plt.show()
-
-class Player(Brain):
-    def setInputValues(self, i):
-        self.inputValues = [i[0], i[1]]
-    
-    def fitnessEvaluationMethod(self, show=False):
-        tests = [(0,0,0),(0,1,1),(1,0,1),(1,1,0)]
-
-        dist = 0
-
-        for i in tests:
-            self.setInputValues(i)
-            self.generateOutputValues()
-            oo = 0.0 if self.outputValues[0] < 0.5 else 1.0
-
-            dist += abs(i[2] - self.outputValues[0])
-            if show:
-                print(f"i0: {i[0]}, i1: {i[1]}, expected: {i[2]}, result: {oo}")
-
-        return (4 - dist)**2
-# seed: 0
-# i: 2
-# o: 1
-# range (50)
-if __name__ == "__main__":
-    random.seed(2)#2
-
-    genomeSettings = GenomeSettings(inputs=2, outputs=1, bias=0)
-    populationSettings = PopulationSettings(size=200, genomeSettings=genomeSettings)
-    p = Population(populationSettings, Player)
-    cnt = 0
-    max_ = 1000
-    while p.globalChampion.fitness < 12:
-        cnt += 1
-        if p.evolve():
-            p.globalChampion.plot(pauseTime=0.0001)
-        if cnt == max_:
-            break
-    print(p)
-    print(p.globalChampion)
-    print(p.globalChampion.genome)
-
-    p.globalChampion.fitnessEvaluationMethod(show=True)
-    p.globalChampion.plot(block=True)
