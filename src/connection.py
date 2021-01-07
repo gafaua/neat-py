@@ -1,7 +1,7 @@
 import random
 
 class Connection:
-    def __init__(self, inNode, outNode, innovationNumber, weight=1.0, enabled=True):
+    def __init__(self, inNode, outNode, innovationNumber, weight=0.1, enabled=True):
         self.inNode = inNode
         self.outNode = outNode
         self.innovationNumber = innovationNumber
@@ -26,8 +26,11 @@ class Connection:
     def clone(self):
         return Connection(self.inNode.clone(), self.outNode.clone(), self.innovationNumber, weight=self.weight, enabled=self.enabled)
 
-    def mutateWeight(self, step, stepRate):
+    def mutateWeight(self, step, stepRate, newRate):
+        val = random.uniform(-step, step)
         if random.random() < stepRate:
-            self.weight += random.uniform(-step, step)
-        else:
-            self.weight = random.uniform(-2,2)
+            self.weight += val
+            if self.weight > 4.0: self.weight = 4.0
+            elif self.weight < -4.0: self.weight = -4.0
+        elif random.random() < newRate:
+            self.weight = val

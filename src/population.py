@@ -62,16 +62,20 @@ class Population:
             self.championHistory.append(self.BrainClass.clone(self.globalChampion))
             print(f"New champion brain - Generation {self.generation} - Fitness {self.globalChampion.fitness}")
         
-        avgAdjustedFitnessSum = self.getAvgAdjustedFitnessSum()
+        # avgAdjustedFitnessSum = self.getAvgAdjustedFitnessSum()
 
-        i = 0
-        while i < len(self.species):
-            nOffspring = self.settings.size * (self.species[i].avgAdjustedFitness / avgAdjustedFitnessSum)
-            if self.species[i].staleness >= self.settings.maxStaleness or \
-               nOffspring < 1:
-                del self.species[i]
-                i -= 1
-            i += 1
+        # i = 0
+        # while i < len(self.species):
+        #     nOffspring = self.settings.size * (self.species[i].avgAdjustedFitness / avgAdjustedFitnessSum)
+        #     if self.species[i].staleness >= self.settings.maxStaleness or \
+        #        nOffspring < 1:
+        #         del self.species[i]
+        #         i -= 1
+        #     i += 1
+
+        for s in self.species:
+            if s.staleness >= self.settings.maxStaleness:
+                s.avgAdjustedFitness *= 0.1
 
         self.generation += 1
 

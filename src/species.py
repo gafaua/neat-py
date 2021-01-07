@@ -14,10 +14,10 @@ class Species:
         self.staleness = 0
 
     def __str__(self):
-        value = f"Population: {len(self.population)}\n"
-        value += f"Fitness: {self.fitness}\n"
-        value += f"Brains:\n"
-        for i, b in enumerate(self.population): value += f"   {i+1}.{str(b)}\n"
+        value = f"Brains: {len(self.population)} Fitness: {self.fitness} Staleness: {self.staleness}\n"
+        # value += f"\n"
+        # value += f"\n"
+        #for i, b in enumerate(self.population): value += f"   {i+1}.{str(b)}\n"
         return value
 
     def shouldContain(self, brain, threshold):

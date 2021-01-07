@@ -88,26 +88,20 @@ class Player(Brain):
 # o: 1
 # range (50)
 if __name__ == "__main__":
-    random.seed(1)
+    random.seed(2)#2
 
     genomeSettings = GenomeSettings(inputs=2, outputs=1, bias=0)
-    # im = InnovationManager(genomeSettings)
-    # pl = Player.create(im, genomeSettings)
-
-    # print(type(pl).create(im, genomeSettings).fitnessEvaluationMethod())
-
-
-    populationSettings = PopulationSettings(size=150, genomeSettings=genomeSettings)
+    populationSettings = PopulationSettings(size=200, genomeSettings=genomeSettings)
     p = Population(populationSettings, Player)
     cnt = 0
     max_ = 1000
-    while p.globalChampion.fitness < 13:
+    while p.globalChampion.fitness < 12:
         cnt += 1
         if p.evolve():
             p.globalChampion.plot(pauseTime=0.0001)
         if cnt == max_:
             break
-
+    print(p)
     print(p.globalChampion)
     print(p.globalChampion.genome)
 

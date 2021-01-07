@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import random
 
+# TODO add save to file and load to file options
+
 class Genome:
     def __init__(self, innovationManager, settings: GenomeSettings=None):
         self.innovationManager: InnovationManager = innovationManager
@@ -33,7 +35,8 @@ class Genome:
                 self.createConnection(n1, n2)
 
         # genome is fully connected on creation
-        self.availableNodes = []
+        self.availableNodes = set()
+        self.maxConnectionsPerLayer = [(inputs + bias) * outputs, 0]
 
     def __str__(self):
         value = "Genome\n\n"
@@ -90,7 +93,7 @@ class Genome:
         options = {
             'node_color': nodeColors,
             'node_size': 1000,
-            'node_shape': 'o',#so^>v<dph8
+            'node_shape': 'o',
             'width': widths,
             'arrowstyle': '-|>',
             'arrowsize': 20,
@@ -112,6 +115,11 @@ class Genome:
             plt.pause(pauseTime)
 
     def updateAvailableNodes(self):
+        """
+        Updates the self.availableNodes set.
+
+        self.availableNodes will contain nodes that can be used to create a new connection
+        """
         layerNodes = [set() for _ in range(self.layers)]
         nodes = self.nodes.values()
 
@@ -124,6 +132,7 @@ class Genome:
             maxConnectionsPerLayer[i].update(possibleConnections)
             possibleConnections.update(layerNodes[i])
         
+        self.maxConnectionsPerLayer = [len(maxConnectionsPerLayer[i]) for i in range(self.layers)]
         self.availableNodes = set()
         
         for node in nodes:
@@ -157,6 +166,9 @@ class Genome:
             n1, n2 = getTwoRandomNodes()
 
         self.createConnection(n1, n2, weight=random.uniform(-2,2))
+    
+        if len(n1.outputs) == self.maxConnectionsPerLayer[n1.layer]:
+            self.availableNodes.discard(n1)
 
     def addNode(self):
         if len(self.connections) == 0:
@@ -190,23 +202,43 @@ class Genome:
     def mutate(self):
         if len(self.connections) == 0:
             self.addConnection()
-        
-        # mutate weight
-        if random.random() < self.settings.mutation.weightMutationRate:
-            for c in self.connections.values():
-                c.mutateWeight(self.settings.mutation.weightMutationStep, self.settings.mutation.weightMutationStepRate)
-            # if random.random() < self.settings.mutation.togglesEnableMutationRate:
-            #     c.enabled = not c.enabled
 
         # add connection
         if random.random() < self.settings.mutation.addConnectionMutationRate:
             self.addConnection()
-        
         # add node
-        if random.random() < self.settings.mutation.addNodeMutationRate:
+        elif random.random() < self.settings.mutation.addNodeMutationRate:
             self.addNode()
+        else:          
+            # mutate weights
+            if random.random() < self.settings.mutation.weightMutationRate:
+                for c in self.connections.values():
+                    if c.enabled:
+                        c.mutateWeight(self.settings.mutation.weightMutationStep,
+                                       self.settings.mutation.weightMutationStepRate,
+                                       self.settings.mutation.weightMutationNewRate)
+            
+            # toggle enabled field in a random connection
+            if random.random() < self.settings.mutation.togglesEnableMutationRate:
+                connection = random.sample(list(self.connections.values()), 1)[0]
 
-    def createConnection(self, n1, n2, weight=1.0):
+                if connection.enabled:
+                    for c in connection.inNode.outputs:
+                        if c.enabled and c.innovationNumber != connection.innovationNumber:
+                            connection.enabled = False
+                            break
+                else:
+                    connection.enabled = True
+
+            # reenable a disabled connection
+            if random.random() < self.settings.mutation.reEnableMutationRate:
+                for c in self.connections.values():
+                    if not c.enabled:
+                        c.enabled = True
+                        break
+
+
+    def createConnection(self, n1, n2, weight=0.1):
         innovationNumber = self.innovationManager.getConnectionInnovationNumber(n1.id, n2.id, self)
         newConnection = Connection(n1, n2, innovationNumber, weight)
         n1.addConnection(newConnection)
@@ -360,10 +392,10 @@ class Genome:
             N = 1
 
         common = set(self.connections).intersection(set(genome.connections))
-        weightDistanceAvg = 0
+        weightDistance = 0
 
         for c in common:
-            weightDistanceAvg += abs(self.connections[c].weight - genome.connections[c].weight)
+            weightDistance += abs(self.connections[c].weight - genome.connections[c].weight)
 
         return self.settings.distance.coeffDisjoint * (n1 + n2 - 2*len(common)) / N + \
-               self.settings.distance.coeffWeights * weightDistanceAvg / len(common)
+               self.settings.distance.coeffWeights * weightDistance / len(common)
