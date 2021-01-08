@@ -3,6 +3,7 @@ from settings import GenomeSettings, PopulationSettings
 from matplotlib import pyplot as plt
 from population import Population
 from brain import Brain
+from neat import NEAT
 
 class Player(Brain):
     def setInputValues(self, i):
@@ -27,21 +28,14 @@ class Player(Brain):
 if __name__ == "__main__":
     random.seed(2)#2
 
-    genomeSettings = GenomeSettings(inputs=2, outputs=1, bias=0)
+    genomeSettings = GenomeSettings(inputs=2, outputs=1, bias=1)
     populationSettings = PopulationSettings(size=200, genomeSettings=genomeSettings)
 
-    pop = Population(populationSettings, Player)
-    cnt = 0
-    max_ = 1000
-    while pop.globalChampion.fitness < 12:
-        cnt += 1
-        if pop.evolve():
-            pop.globalChampion.plot(pauseTime=0.0001)
-        if cnt == max_:
-            break
-    print(pop)
-    print(pop.globalChampion)
-    print(pop.globalChampion.genome)
+    neat = NEAT(populationSettings, Player)
+    champion = neat.learn(iterations=1000, fitnessGoal=12)
 
-    pop.globalChampion.fitnessEvaluation(show=True)
-    pop.globalChampion.plot(block=True)
+    print(champion)
+    print(champion.genome)
+
+    champion.fitnessEvaluation(show=True)
+    champion.plot(block=True)

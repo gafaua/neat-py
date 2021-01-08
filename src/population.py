@@ -46,7 +46,8 @@ class Population:
         for b in self.brains: 
             b.evaluateFitness()
 
-        # cull species and compute adjusted average fitness to prepare the next generation
+        # cull species and compute adjusted average fitness 
+        # to prepare the computation of the next generation
         for s in self.species:
             s.sort()
             s.cull(self.settings.cullRate)
@@ -54,18 +55,17 @@ class Population:
 
         # sort species by their respective champion
         self.species.sort(key=lambda s: s.fitness, reverse=True)
-        
+
         # update best player if needed
         if self.globalChampion.fitness < self.species[0].population[0].fitness:
             newChampion = True
             self.globalChampion = self.species[0].population[0]
             self.championHistory.append(self.BrainClass.clone(self.globalChampion))
             print(f"New champion brain - Generation {self.generation} - Fitness {self.globalChampion.fitness}")
-        
-        # avgAdjustedFitnessSum = self.getAvgAdjustedFitnessSum()
 
         # TODO remove bad species and species which have been stale for too long
         for s in self.species:
+            # stale species shouldn't be allowed to produce a lot of offspring
             if s.staleness >= self.settings.maxStaleness:
                 s.avgAdjustedFitness *= 0.1
 
