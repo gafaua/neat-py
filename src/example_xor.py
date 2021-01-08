@@ -8,7 +8,7 @@ from neat import NEAT
 class Player(Brain):
     def setInputValues(self, i):
         self.inputValues = [i[0], i[1]]
-    
+
     def fitnessEvaluation(self, show=False):
         tests = [(0,0,0),(0,1,1),(1,0,1),(1,1,0)]
 
@@ -29,6 +29,7 @@ if __name__ == "__main__":
     random.seed(2)#2
 
     genomeSettings = GenomeSettings(inputs=2, outputs=1, bias=1)
+
     populationSettings = PopulationSettings(size=200, genomeSettings=genomeSettings)
 
     neat = NEAT(populationSettings, Player)
@@ -39,3 +40,5 @@ if __name__ == "__main__":
 
     champion.fitnessEvaluation(show=True)
     champion.plot(block=True)
+    champion.genome.save("xor")
+

@@ -6,8 +6,7 @@ from errors import InvalidTopologyError
 import matplotlib.pyplot as plt
 import networkx as nx
 import random
-
-# TODO add save to file and load to file options
+import os
 
 class Genome:
     def __init__(self, innovationManager, settings: GenomeSettings=None):
@@ -38,6 +37,37 @@ class Genome:
         self.availableNodes = set()
         self.maxConnectionsPerLayer = [(inputs + bias) * outputs, 0]
 
+    @classmethod
+    def fromFile(cls, fileName, manager: InnovationManager, settings: GenomeSettings):
+        with open(fileName, "r") as f:
+            genome = cls(manager) # empty genome
+            lines = f.readlines()
+            genes = [l.split() for l in lines]
+            maxLayer = 0
+            for g in genes:
+                if g[0] == "node":
+                    idNum = int(g[1])
+                    layer = int(g[2])
+                    genome.nodes[idNum] = Node(idNum, layer)
+                    if layer > maxLayer:
+                        maxLayer = layer
+                elif g[0] == "connection":
+                    inNode = genome.nodes[int(g[1])]
+                    outNode = genome.nodes[int(g[2])]
+                    innovationNumber = int(g[3])
+                    weight = float(g[4])
+                    enabled = g[5] == "1"
+
+                    connection = Connection(inNode, outNode, innovationNumber, weight, enabled)
+                    inNode.addConnection(connection)
+                    genome.connections[innovationNumber] = connection
+
+            genome.settings = settings
+            genome.layers = maxLayer + 1
+            genome.updateAvailableNodes()
+            
+            return genome
+
     def __str__(self):
         value = "Genome\n\n"
         value += f"Inputs:  {self.settings.inputs}\n"
@@ -55,6 +85,16 @@ class Genome:
         for connection in self.connections.values():
             value += f"{str(connection)}\n"
         return value
+
+    def save(self, fileName):
+        pwd = os.path.dirname(os.path.realpath(__file__))
+        with open(f"{pwd}/{fileName}.gnome", 'w') as f:
+            # write nodes
+            for n in self.nodes.values():
+                f.write(f"node {n.id} {n.layer}\n")
+            # write connection
+            for c in self.connections.values():
+                f.write(f"connection {c.inNode.id} {c.outNode.id} {c.innovationNumber} {c.weight} {1 if c.enabled else 0}\n")
 
     def inputNodes(self):
         # input + bias
@@ -148,7 +188,7 @@ class Genome:
         # first sort key is layer, second is id to make sure inputs and outputs are ordered
         self.network = sorted(self.nodes.values(), key=lambda n: (n.layer, n.id))
 
-    def addConnection(self):
+    def mutateAddConnection(self):
         if len(self.availableNodes) < 2:
             return
 
@@ -170,10 +210,7 @@ class Genome:
         if len(n1.outputs) == self.maxConnectionsPerLayer[n1.layer]:
             self.availableNodes.discard(n1)
 
-    def addNode(self):
-        if len(self.connections) == 0:
-            self.addConnection()
-        
+    def mutateAddNode(self):
         # disable old connection
         oldConnection = random.sample(list(self.connections.values()), 1)[0]
         oldConnection.enabled = False
@@ -199,44 +236,52 @@ class Genome:
 
         self.updateAvailableNodes()
 
+    def mutateReenable(self):
+        for c in self.connections.values():
+            if not c.enabled:
+                c.enabled = True
+                break
+
+    def mutateToggleEnabled(self):
+        connection = random.sample(list(self.connections.values()), 1)[0]
+
+        if connection.enabled:
+            for c in connection.inNode.outputs:
+                if c.enabled and c.innovationNumber != connection.innovationNumber:
+                    connection.enabled = False
+                    break
+        else:
+            connection.enabled = True
+
+    def mutateWeight(self):
+        for c in self.connections.values():
+            if c.enabled:
+                c.mutateWeight(self.settings.mutation.weightMutationStep,
+                               self.settings.mutation.weightMutationStepRate,
+                               self.settings.mutation.weightMutationNewRate)
+
     def mutate(self):
         if len(self.connections) == 0:
-            self.addConnection()
+            self.mutateAddConnection()
 
         # add connection
         if random.random() < self.settings.mutation.addConnectionMutationRate:
-            self.addConnection()
+            self.mutateAddConnection()
         # add node
         elif random.random() < self.settings.mutation.addNodeMutationRate:
-            self.addNode()
+            self.mutateAddNode()
         else:          
             # mutate weights
             if random.random() < self.settings.mutation.weightMutationRate:
-                for c in self.connections.values():
-                    if c.enabled:
-                        c.mutateWeight(self.settings.mutation.weightMutationStep,
-                                       self.settings.mutation.weightMutationStepRate,
-                                       self.settings.mutation.weightMutationNewRate)
+                self.mutateWeight()
             
             # toggle enabled field in a random connection
             if random.random() < self.settings.mutation.togglesEnableMutationRate:
-                connection = random.sample(list(self.connections.values()), 1)[0]
-
-                if connection.enabled:
-                    for c in connection.inNode.outputs:
-                        if c.enabled and c.innovationNumber != connection.innovationNumber:
-                            connection.enabled = False
-                            break
-                else:
-                    connection.enabled = True
+                self.mutateToggleEnabled()
 
             # reenable a disabled connection
             if random.random() < self.settings.mutation.reEnableMutationRate:
-                for c in self.connections.values():
-                    if not c.enabled:
-                        c.enabled = True
-                        break
-
+                self.mutateReenable()
 
     def createConnection(self, n1, n2, weight=0.1):
         innovationNumber = self.innovationManager.getConnectionInnovationNumber(n1.id, n2.id, self)

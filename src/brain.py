@@ -43,6 +43,11 @@ class Brain:
         copy.fitness = brain.fitness
         return copy
 
+    @classmethod
+    def fromFile(cls, fileName: str, manager: InnovationManager, settings: GenomeSettings):
+        genome = Genome.fromFile(fileName, manager, settings)
+        return cls(genome)
+
     def setInputValues(self):
         """
         Method to overload to get inputs to feed to the neural network
