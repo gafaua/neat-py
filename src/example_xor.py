@@ -13,20 +13,24 @@ class Player(Brain):
         tests = [(0,0,0),(0,1,1),(1,0,1),(1,1,0)]
 
         dist = 0
-
+        correct = True
         for i in tests:
             self.setInputValues(i)
             self.generateOutputValues()
-            oo = 0.0 if self.outputValues[0] < 0.5 else 1.0
+            oo = 0 if self.outputValues[0] < 0.5 else 1
 
             dist += abs(i[2] - self.outputValues[0])
+            if oo != i[2]:
+                correct = False
             if show:
                 print(f"i0: {i[0]}, i1: {i[1]}, expected: {i[2]}, result: {oo}")
-
+        
+        if correct:
+            return 16
         return (4 - dist)**2
 
 if __name__ == "__main__":
-    random.seed(1)#2#1
+    #random.seed(2)#2#1
 
     genomeSettings = GenomeSettings(inputs=2, outputs=1, bias=1)
 
