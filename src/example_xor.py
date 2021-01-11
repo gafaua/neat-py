@@ -30,14 +30,13 @@ class Player(Brain):
         return (4 - dist)**2
 
 if __name__ == "__main__":
-    #random.seed(2)#2#1
+    #random.seed(1)#2#1
 
     genomeSettings = GenomeSettings(inputs=2, outputs=1, bias=1)
-
-    populationSettings = PopulationSettings(size=200, genomeSettings=genomeSettings)
+    populationSettings = PopulationSettings(size=150, genomeSettings=genomeSettings)
 
     neat = NEAT(populationSettings, Player)
-    champion = neat.learn(iterations=1000, fitnessGoal=12)
+    champion = neat.learn(iterations=1000, fitnessGoal=16)
 
     print(champion)
     print(champion.genome)

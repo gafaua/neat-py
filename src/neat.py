@@ -23,5 +23,5 @@ class NEAT:
             if cnt == iterations:
                 break
         print(self.population)
-    
+
         return self.population.globalChampion

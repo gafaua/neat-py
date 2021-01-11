@@ -65,13 +65,13 @@ class Genome:
             genome.settings = settings
             genome.layers = maxLayer + 1
             genome.updateAvailableNodes()
-            
+
             return genome
 
     def __str__(self):
         value = "Genome\n\n"
         value += f"Inputs:  {self.settings.inputs}\n"
-        value += f"Bias:    {self.settings.bias > 1}\n"
+        value += f"Bias:    {self.settings.bias == 1}\n"
         value += f"Hidden:  {len(self.nodes) - self.settings.inputs - self.settings.outputs - self.settings.bias}\n"
         value += f"Outputs: {self.settings.outputs}\n"
         value += f"Layers:  {self.layers}\n\n"
@@ -217,7 +217,7 @@ class Genome:
         n1, n2 = self.nodes[oldConnection.inNode.id], self.nodes[oldConnection.outNode.id]
 
         # create a new node
-        newId = self.innovationManager.getNodeId(oldConnection.innovationNumber, self)
+        newId = self.innovationManager.getNodeId(oldConnection.innovationNumber, oldConnection.inNode.id, oldConnection.outNode.id)
         newNode = Node(id=newId, layer=n1.layer + 1)
 
         # shift upper layers if necessary to respect the topological order
@@ -284,7 +284,7 @@ class Genome:
                 self.mutateReenable()
 
     def createConnection(self, n1, n2, weight=0.1):
-        innovationNumber = self.innovationManager.getConnectionInnovationNumber(n1.id, n2.id, self)
+        innovationNumber = self.innovationManager.getConnectionInnovationNumber(n1.id, n2.id)
         newConnection = Connection(n1, n2, innovationNumber, weight)
         n1.addConnection(newConnection)
         self.connections[innovationNumber] = newConnection

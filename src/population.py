@@ -67,7 +67,7 @@ class Population:
         for s in self.species:
             # stale species shouldn't be allowed to produce a lot of offspring
             if s.staleness >= self.settings.maxStaleness:
-                s.avgAdjustedFitness *= 0.1
+                s.avgAdjustedFitness *= 0.05
 
         self.generation += 1
 
